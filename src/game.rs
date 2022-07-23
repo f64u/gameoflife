@@ -9,18 +9,18 @@ pub enum Cell {
 }
 
 impl Cell {
-    fn is_alive(&self) -> bool {
+    pub fn is_alive(&self) -> bool {
         match *self {
             Cell::Alive => true,
             _ => false,
         }
     }
 
-    fn kill(&mut self) {
+    pub fn kill(&mut self) {
         *self = Cell::Dead;
     }
 
-    fn resurrect(&mut self) {
+    pub fn resurrect(&mut self) {
         *self = Cell::Alive;
     }
 }
@@ -59,12 +59,20 @@ impl World {
         }
     }
 
-    fn get_index(&self, i: i32, j: i32) -> Option<usize> {
+    pub fn cells(&self) -> &Vec<Cell> {
+        &self.cells
+    }
+
+    pub fn get_index(&self, i: i32, j: i32) -> Option<usize> {
         if i < 0 || j < 0 || i as usize > self.width || j as usize > self.height {
             None
         } else {
-            Some(self.width * i as usize + j as usize)
+            Some(self.width * j as usize + i as usize)
         }
+    }
+
+    pub fn get_pos(&self, index: usize) -> (usize, usize) {
+        (index % self.width, index / self.width)
     }
 
     pub fn get_cell(&self, i: i32, j: i32) -> Option<&Cell> {
@@ -107,7 +115,7 @@ impl ToString for World {
                     .iter()
                     .map(|c| c.to_string())
                     .collect::<Vec<_>>()
-                    .join(" ")
+                    .join("")
             })
             .join("\n")
     }
@@ -116,9 +124,10 @@ impl ToString for World {
 #[cfg(test)]
 mod test {
     use super::*;
+    use Cell::*;
+
     #[test]
     fn count_alive_neighbors_works() {
-        use Cell::*;
         let world = World {
             width: 3,
             height: 3,
@@ -131,11 +140,69 @@ mod test {
 
         assert_eq!(world.count_alive_neighbors(0, 0), 2);
         println!();
-        assert_eq!(world.count_alive_neighbors(0, 1), 3);
+        assert_eq!(world.count_alive_neighbors(0, 1), 2);
         println!();
         assert_eq!(world.count_alive_neighbors(1, 1), 2);
         println!();
         assert_eq!(world.count_alive_neighbors(2, 2), 1);
         println!();
+    }
+
+    #[test]
+    fn get_index_works() {
+        let world = World {
+            width: 3,
+            height: 5,
+            cells: vec![
+                Alive, Alive, Alive, // 1
+                Alive, Alive, Alive, // 2
+                Alive, Alive, Alive, // 3
+                Alive, Alive, Alive, // 4
+                Alive, Alive, Alive, // 5
+            ],
+        };
+
+        assert_eq!(world.get_index(0, 0), Some(0));
+        assert_eq!(world.get_index(2, 4), Some(3 * 5 - 1));
+        assert_eq!(world.get_index(1, 2), Some(3 * 2 + 1));
+    }
+
+    #[test]
+    fn get_pos_works() {
+        let world = World {
+            width: 3,
+            height: 5,
+            cells: vec![
+                Alive, Alive, Alive, // 1
+                Alive, Alive, Alive, // 2
+                Alive, Alive, Alive, // 3
+                Alive, Alive, Alive, // 4
+                Alive, Alive, Alive, // 5
+            ],
+        };
+
+        assert_eq!(world.get_pos(0), (0, 0));
+        assert_eq!(world.get_pos(14), (2, 4));
+        assert_eq!(world.get_pos(3 * 2 + 1), (1, 2));
+    }
+
+    #[test]
+    fn both_work() {
+        let world = World {
+            width: 3,
+            height: 5,
+            cells: vec![
+                Alive, Alive, Alive, // 1
+                Alive, Alive, Alive, // 2
+                Alive, Alive, Alive, // 3
+                Alive, Alive, Alive, // 4
+                Alive, Alive, Alive, // 5
+            ],
+        };
+
+        for i in 0..3 * 5 {
+            let (x, y) = world.get_pos(i);
+            assert_eq!(world.get_index(x as i32, y as i32), Some(i));
+        }
     }
 }
