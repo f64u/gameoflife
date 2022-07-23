@@ -69,7 +69,12 @@ pub fn run() -> Result<(), String> {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
-
+                Event::KeyDown {
+                    keycode: Some(Keycode::R),
+                    ..
+                } => {
+                    world.refresh();
+                }
                 Event::MouseMotion { .. } => {}
                 e => {
                     println!("{e:?}");

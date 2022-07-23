@@ -41,22 +41,28 @@ pub struct World {
     cells: Vec<Cell>,
 }
 
+pub fn random_cells(width: usize, height: usize, p: f64) -> impl Iterator<Item = Cell> {
+    (0..width * height).map(move |_| {
+        let x: f64 = rand::random();
+        if x < p {
+            Cell::Dead
+        } else {
+            Cell::Alive
+        }
+    })
+}
+
 impl World {
     pub fn new(width: usize, height: usize) -> Self {
         Self {
             width,
             height,
-            cells: (0..width * height)
-                .map(|_| {
-                    let x: f64 = rand::random();
-                    if x < PROPORTION {
-                        Cell::Dead
-                    } else {
-                        Cell::Alive
-                    }
-                })
-                .collect(),
+            cells: random_cells(width, height, PROPORTION).collect(),
         }
+    }
+
+    pub fn refresh(&mut self) {
+        self.cells = random_cells(self.width, self.height, PROPORTION).collect();
     }
 
     pub fn cells(&self) -> &Vec<Cell> {
