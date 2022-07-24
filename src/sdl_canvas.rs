@@ -4,6 +4,7 @@ use sdl2::{
     event::Event, keyboard::Keycode, pixels::Color, rect::Rect, render::Canvas, video::Window,
 };
 
+/*
 use crate::game::World;
 
 struct Config {
@@ -13,14 +14,6 @@ struct Config {
 }
 
 impl Config {
-    fn new(window_width: usize, window_height: usize, pixel_size: usize) -> Self {
-        Self {
-            window_width,
-            window_height,
-            pixel_size,
-        }
-    }
-
     fn pixel_count_x(&self) -> usize {
         self.window_width / self.pixel_size
     }
@@ -115,3 +108,4 @@ fn draw_world(canvas: &mut Canvas<Window>, world: &World) -> Result<(), String> 
 
     Ok(())
 }
+ */

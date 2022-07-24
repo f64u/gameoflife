@@ -2,21 +2,61 @@ use std::time::Duration;
 
 use cursive::views::{TextContent, TextView};
 
-use crate::game::World;
+/*
+
+impl RepresentAs<String> for Cell {
+    fn represent(&self) -> String {
+        match *self {
+            Cell::Alive => "#",
+            Cell::Dead => " ",
+        }
+        .into()
+    }
+}
+
+impl RepresentAs<String> for World {
+    fn represent(&self) -> String {
+        self.cells()
+            .chunks(self.width())
+            .map(|chunk| {
+                chunk
+                    .iter()
+                    .map(|c| c.represent())
+                    .collect::<Vec<_>>()
+                    .join("")
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+}
 
 struct Canvas {
     world: World,
     text: TextContent,
 }
 
-impl Canvas {
-    pub fn new(world: World, text: TextContent) -> Self {
+impl Portable<String> for TextContent {
+    fn portray(&mut self, data: String) -> Result<(), String> {
+        self.set_content(data);
+        Ok(())
+    }
+}
+
+impl Controller<String, World> for Canvas {
+    type Adapter = TextContent;
+
+    fn new(world: World, text: TextContent) -> Self {
         return Self { world, text };
     }
 
-    pub fn update(&mut self) {
+    pub fn world(&mut self) -> &mut World {
+
+    }
+
+    fn update(&mut self) -> {
         self.world.tick();
-        self.text.set_content(self.world.to_string());
+        self.text.set_content(self.world.represent());
+        Ok(())
     }
 }
 
@@ -38,3 +78,5 @@ pub fn run() {
 
     siv.run();
 }
+
+*/

@@ -1,12 +1,14 @@
+use cellular_automaton::{cell::BasicCell, common::Position, world::BasicWorld};
 use itertools::Itertools;
 
 const PROPORTION: f64 = 0.9;
 
-#[derive(Clone)]
 pub enum Cell {
     Alive,
     Dead,
 }
+
+impl BasicCell for Cell {}
 
 impl Cell {
     pub fn is_alive(&self) -> bool {
@@ -25,22 +27,6 @@ impl Cell {
     }
 }
 
-impl ToString for Cell {
-    fn to_string(&self) -> String {
-        match self {
-            Cell::Alive => "#",
-            Cell::Dead => " ",
-        }
-        .into()
-    }
-}
-
-pub struct World {
-    width: usize,
-    height: usize,
-    cells: Vec<Cell>,
-}
-
 pub fn random_cells(width: usize, height: usize, p: f64) -> impl Iterator<Item = Cell> {
     (0..width * height).map(move |_| {
         let x: f64 = rand::random();
@@ -52,56 +38,52 @@ pub fn random_cells(width: usize, height: usize, p: f64) -> impl Iterator<Item =
     })
 }
 
-impl World {
-    pub fn new(width: usize, height: usize) -> Self {
-        Self {
-            width,
-            height,
-            cells: random_cells(width, height, PROPORTION).collect(),
-        }
-    }
+pub struct World {
+    width: usize,
+    height: usize,
+    cells: Vec<Cell>,
+}
 
-    pub fn refresh(&mut self) {
-        self.cells = random_cells(self.width, self.height, PROPORTION).collect();
-    }
+impl BasicWorld for World {
+    type Cell = Cell;
 
-    pub fn cells(&self) -> &Vec<Cell> {
+    fn cells(&self) -> &Vec<Self::Cell> {
         &self.cells
     }
 
-    pub fn get_index(&self, i: i32, j: i32) -> Option<usize> {
-        if i < 0 || j < 0 || i as usize > self.width || j as usize > self.height {
-            None
-        } else {
-            Some(self.width * j as usize + i as usize)
+    fn cells_mut(&mut self) -> &mut Vec<Self::Cell> {
+        &mut self.cells
+    }
+
+    fn new(width: usize, height: usize, initial_cells: Vec<Self::Cell>) -> Self {
+        Self {
+            width,
+            height,
+            cells: initial_cells,
         }
     }
 
-    pub fn get_pos(&self, index: usize) -> (usize, usize) {
-        (index % self.width, index / self.width)
+    fn new_random(width: usize, height: usize) -> Self {
+        Self::new(
+            width,
+            height,
+            random_cells(width, height, PROPORTION).collect(),
+        )
     }
 
-    pub fn get_cell(&self, i: i32, j: i32) -> Option<&Cell> {
-        self.get_index(i, j).map(|index| &self.cells[index])
+    fn height(&self) -> usize {
+        self.height
     }
 
-    pub fn get_cell_mut(&mut self, i: i32, j: i32) -> Option<&mut Cell> {
-        self.get_index(i, j).map(|index| &mut self.cells[index])
+    fn width(&self) -> usize {
+        self.width
     }
 
-    pub fn count_alive_neighbors(&self, i: usize, j: usize) -> usize {
-        (i.max(1) - 1..=(i + 1).min(self.width - 1))
-            .cartesian_product(j.max(1) - 1..=(j + 1).min(self.height - 1))
-            .filter(move |&item| item != (i, j))
-            .filter_map(|(x, y)| self.get_cell(x as i32, y as i32))
-            .filter(|cell| cell.is_alive())
-            .count()
-    }
-
-    pub fn tick(&mut self) {
-        for (i, j) in (0..self.width).cartesian_product(0..self.height) {
-            let count = self.count_alive_neighbors(i, j);
-            let cell = self.get_cell_mut(i as i32, j as i32).unwrap();
+    fn tick(&mut self) {
+        for (i, j) in (0..self.width()).cartesian_product(0..self.height()) {
+            let p = (i as isize, j as isize);
+            let count = self.count_alive_neighbors(p);
+            let cell = self.get_cell_mut(p).unwrap();
 
             match cell {
                 &mut Cell::Alive if count < 2 || count > 3 => cell.kill(),
@@ -112,18 +94,16 @@ impl World {
     }
 }
 
-impl ToString for World {
-    fn to_string(&self) -> String {
-        self.cells
-            .chunks(self.width)
-            .map(|chunk| {
-                chunk
-                    .iter()
-                    .map(|c| c.to_string())
-                    .collect::<Vec<_>>()
-                    .join("")
-            })
-            .join("\n")
+impl World {
+    fn count_alive_neighbors(&self, p: Position) -> usize {
+        self.moore_neighbors(p)
+            .iter()
+            .filter(|c| c.is_alive())
+            .count()
+    }
+
+    fn refresh(&mut self) {
+        *self.cells_mut() = random_cells(self.width(), self.height(), PROPORTION).collect();
     }
 }
 
@@ -144,13 +124,13 @@ mod test {
             ],
         };
 
-        assert_eq!(world.count_alive_neighbors(0, 0), 2);
+        assert_eq!(world.count_alive_neighbors((0, 0)), 2);
         println!();
-        assert_eq!(world.count_alive_neighbors(0, 1), 2);
+        assert_eq!(world.count_alive_neighbors((0, 1)), 2);
         println!();
-        assert_eq!(world.count_alive_neighbors(1, 1), 2);
+        assert_eq!(world.count_alive_neighbors((1, 1)), 2);
         println!();
-        assert_eq!(world.count_alive_neighbors(2, 2), 1);
+        assert_eq!(world.count_alive_neighbors((2, 2)), 1);
         println!();
     }
 
@@ -168,9 +148,9 @@ mod test {
             ],
         };
 
-        assert_eq!(world.get_index(0, 0), Some(0));
-        assert_eq!(world.get_index(2, 4), Some(3 * 5 - 1));
-        assert_eq!(world.get_index(1, 2), Some(3 * 2 + 1));
+        assert_eq!(world.get_index((0, 0)), Some(0));
+        assert_eq!(world.get_index((2, 4)), Some(3 * 5 - 1));
+        assert_eq!(world.get_index((1, 2)), Some(3 * 2 + 1));
     }
 
     #[test]
@@ -208,7 +188,7 @@ mod test {
 
         for i in 0..3 * 5 {
             let (x, y) = world.get_pos(i);
-            assert_eq!(world.get_index(x as i32, y as i32), Some(i));
+            assert_eq!(world.get_index((x, y)), Some(i));
         }
     }
 }
