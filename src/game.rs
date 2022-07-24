@@ -1,4 +1,8 @@
-use cellular_automaton::{cell::BasicCell, common::Position, world::BasicWorld};
+use cellular_automaton::{
+    cell::BasicCell,
+    common::{Dimensions, Position, Representable},
+    world::BasicWorld,
+};
 use itertools::Itertools;
 
 const PROPORTION: f64 = 0.9;
@@ -27,8 +31,8 @@ impl Cell {
     }
 }
 
-pub fn random_cells(width: usize, height: usize, p: f64) -> impl Iterator<Item = Cell> {
-    (0..width * height).map(move |_| {
+pub fn random_cells(dimensions: Dimensions, p: f64) -> impl Iterator<Item = Cell> {
+    (0..dimensions.0 * dimensions.1).map(move |_| {
         let x: f64 = rand::random();
         if x < p {
             Cell::Dead
@@ -39,8 +43,7 @@ pub fn random_cells(width: usize, height: usize, p: f64) -> impl Iterator<Item =
 }
 
 pub struct World {
-    width: usize,
-    height: usize,
+    dimensions: Dimensions,
     cells: Vec<Cell>,
 }
 
@@ -55,32 +58,23 @@ impl BasicWorld for World {
         &mut self.cells
     }
 
-    fn new(width: usize, height: usize, initial_cells: Vec<Self::Cell>) -> Self {
+    fn new(dimensions: Dimensions, initial_cells: Vec<Self::Cell>) -> Self {
         Self {
-            width,
-            height,
+            dimensions,
             cells: initial_cells,
         }
     }
 
-    fn new_random(width: usize, height: usize) -> Self {
-        Self::new(
-            width,
-            height,
-            random_cells(width, height, PROPORTION).collect(),
-        )
+    fn new_random(dimensions: Dimensions) -> Self {
+        Self::new(dimensions, random_cells(dimensions, PROPORTION).collect())
     }
 
-    fn height(&self) -> usize {
-        self.height
-    }
-
-    fn width(&self) -> usize {
-        self.width
+    fn dimensions(&self) -> Dimensions {
+        self.dimensions
     }
 
     fn tick(&mut self) {
-        for (i, j) in (0..self.width()).cartesian_product(0..self.height()) {
+        for (i, j) in (0..self.dimensions().0).cartesian_product(0..self.dimensions().1) {
             let p = (i as isize, j as isize);
             let count = self.count_alive_neighbors(p);
             let cell = self.get_cell_mut(p).unwrap();
@@ -92,6 +86,10 @@ impl BasicWorld for World {
             }
         }
     }
+
+    fn refresh_random(&mut self) {
+        *self.cells_mut() = random_cells(self.dimensions(), PROPORTION).collect();
+    }
 }
 
 impl World {
@@ -100,10 +98,6 @@ impl World {
             .iter()
             .filter(|c| c.is_alive())
             .count()
-    }
-
-    fn refresh(&mut self) {
-        *self.cells_mut() = random_cells(self.width(), self.height(), PROPORTION).collect();
     }
 }
 
@@ -115,8 +109,7 @@ mod test {
     #[test]
     fn count_alive_neighbors_works() {
         let world = World {
-            width: 3,
-            height: 3,
+            dimensions: Dimensions(3, 3),
             cells: vec![
                 Alive, Dead, Dead, // don't auto format
                 Alive, Alive, Dead, // please don't auto format
@@ -137,8 +130,7 @@ mod test {
     #[test]
     fn get_index_works() {
         let world = World {
-            width: 3,
-            height: 5,
+            dimensions: Dimensions(3, 5),
             cells: vec![
                 Alive, Alive, Alive, // 1
                 Alive, Alive, Alive, // 2
@@ -148,16 +140,15 @@ mod test {
             ],
         };
 
-        assert_eq!(world.get_index((0, 0)), Some(0));
-        assert_eq!(world.get_index((2, 4)), Some(3 * 5 - 1));
-        assert_eq!(world.get_index((1, 2)), Some(3 * 2 + 1));
+        assert_eq!(world.dimensions().get_index((0, 0)), Some(0));
+        assert_eq!(world.dimensions().get_index((2, 4)), Some(3 * 5 - 1));
+        assert_eq!(world.dimensions().get_index((1, 2)), Some(3 * 2 + 1));
     }
 
     #[test]
     fn get_pos_works() {
         let world = World {
-            width: 3,
-            height: 5,
+            dimensions: Dimensions(3, 5),
             cells: vec![
                 Alive, Alive, Alive, // 1
                 Alive, Alive, Alive, // 2
@@ -167,16 +158,15 @@ mod test {
             ],
         };
 
-        assert_eq!(world.get_pos(0), (0, 0));
-        assert_eq!(world.get_pos(14), (2, 4));
-        assert_eq!(world.get_pos(3 * 2 + 1), (1, 2));
+        assert_eq!(world.dimensions().get_pos(0), (0, 0));
+        assert_eq!(world.dimensions().get_pos(14), (2, 4));
+        assert_eq!(world.dimensions().get_pos(3 * 2 + 1), (1, 2));
     }
 
     #[test]
     fn both_work() {
         let world = World {
-            width: 3,
-            height: 5,
+            dimensions: Dimensions(3, 5),
             cells: vec![
                 Alive, Alive, Alive, // 1
                 Alive, Alive, Alive, // 2
@@ -187,8 +177,8 @@ mod test {
         };
 
         for i in 0..3 * 5 {
-            let (x, y) = world.get_pos(i);
-            assert_eq!(world.get_index((x, y)), Some(i));
+            let (x, y) = world.dimensions().get_pos(i);
+            assert_eq!(world.dimensions().get_index((x, y)), Some(i));
         }
     }
 }

@@ -1,14 +1,14 @@
-mod curisive_canvas;
 mod game;
-mod sdl_canvas;
+mod gui;
+mod terminal;
 
 fn main() -> Result<(), String> {
     let args: Vec<_> = std::env::args().skip(1).collect();
-    if args[0] == "in_terminal" {
-        //   curisive_canvas::run();
+    if args.len() > 1 && args[0] == "in_terminal" {
+        terminal::run()?;
         Ok(())
     } else {
-        //  sdl_canvas::run()
+        gui::run()?;
         Ok(())
     }
 }
